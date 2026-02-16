@@ -31,6 +31,45 @@ console.log(`Current slot: ${slot}`)
 const url = getExplorerUrl('tx/your-signature', 'devnet')
 ```
 
+### LightSystemProgram SDK (Minimal)
+
+```typescript
+import { address, generateKeyPairSigner } from '@solana/kit'
+import {
+  createLightSystemProgramSdk,
+  createSolanaClient,
+  sendAndConfirmInstructions,
+} from 'light-protocol-stateless-js-kit'
+
+const client = createSolanaClient({ url: 'http://127.0.0.1:8899' })
+const feePayer = await generateKeyPairSigner()
+const authority = feePayer
+
+const lightSystemProgram = createLightSystemProgramSdk({
+  // Required in this prototype.
+  programAddress: address('SySTEM1eSU2p4BGQfQpimFEWWSC1XDFeun3Nqzz3rT7'),
+})
+
+const invokeIx = await lightSystemProgram.buildInvokeInstruction({
+  authority,
+  feePayer,
+  inputs: new Uint8Array(),
+  // Set optional defaults as needed:
+  // registeredProgramPda, noopProgram, accountCompressionAuthority, accountCompressionProgram
+})
+
+const signature = await sendAndConfirmInstructions({
+  feePayer,
+  instructions: [invokeIx],
+  rpcClient: {
+    rpc: client.rpc,
+    rpcSubscriptions: client.rpcSubscriptions,
+  },
+})
+
+console.log(signature)
+```
+
 ### CLI
 
 ```bash

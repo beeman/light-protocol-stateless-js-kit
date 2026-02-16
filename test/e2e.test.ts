@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import type { LocalSolanaClient } from '@beeman/testcontainers'
 import { createLocalSolanaClient, type StartedSurfpoolContainer, SurfpoolContainer } from '@beeman/testcontainers'
-import { generateKeyPairSigner, lamports } from '@solana/kit'
+import { type Address, airdropFactory, generateKeyPairSigner, lamports } from '@solana/kit'
+import { sendAndConfirmInstructions } from '../src/index.ts'
 
 /**
  * E2E tests using Surfpool via testcontainers.
@@ -17,7 +18,7 @@ import { generateKeyPairSigner, lamports } from '@solana/kit'
  * The client API is identical.
  */
 describe('e2e: Surfpool', () => {
-  let container: StartedSurfpoolContainer
+  let container: StartedSurfpoolContainer | undefined
   let client: LocalSolanaClient
 
   beforeAll(async () => {
@@ -26,7 +27,9 @@ describe('e2e: Surfpool', () => {
   }, 120_000)
 
   afterAll(async () => {
-    await container.stop()
+    if (container) {
+      await container.stop()
+    }
   })
 
   it('should respond to getHealth', async () => {
@@ -54,5 +57,34 @@ describe('e2e: Surfpool', () => {
     const result = await client.rpc.getBalance(keypair.address).send()
 
     expect(result.value).toEqual(lamports(0n))
+  })
+
+  it('should send a memo transaction using sendAndConfirmInstructions', async () => {
+    const feePayer = await generateKeyPairSigner()
+    const airdrop = airdropFactory({
+      rpc: client.rpc,
+      rpcSubscriptions: client.rpcSubscriptions,
+    })
+    await airdrop({
+      commitment: 'confirmed',
+      lamports: lamports(1_000_000_000n),
+      recipientAddress: feePayer.address,
+    })
+
+    const signature = await sendAndConfirmInstructions({
+      feePayer,
+      instructions: [
+        {
+          data: new TextEncoder().encode('light-system-sdk-e2e'),
+          programAddress: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr' as Address,
+        },
+      ],
+      rpcClient: {
+        rpc: client.rpc,
+        rpcSubscriptions: client.rpcSubscriptions,
+      },
+    })
+
+    expect(signature).toMatch(/^[1-9A-HJ-NP-Za-km-z]{64,88}$/)
   })
 })
