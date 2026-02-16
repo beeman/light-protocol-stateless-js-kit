@@ -80,6 +80,22 @@
   },
   "overrides": [
     {
+      "includes": ["src/generated/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noBannedTypes": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
+          },
+          "suspicious": {
+            "noImportCycles": "off"
+          }
+        }
+      }
+    },
+    {
       "assist": {
         "actions": {
           "source": {
